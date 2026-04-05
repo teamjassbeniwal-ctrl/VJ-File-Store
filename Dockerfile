@@ -2,15 +2,27 @@
 # Subscribe YouTube Channel For Amazing Bot @Tech_VJ
 # Ask Doubt on telegram @KingVJ01
 
-FROM python:3.10.8-slim-buster
+FROM python:3.10-slim
 
-RUN apt update && apt upgrade -y
-RUN apt install git -y
+# Update and install dependencies
+RUN apt update && apt upgrade -y && \
+    apt install git -y && \
+    apt clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy requirements first for better caching
 COPY requirements.txt /requirements.txt
 
-RUN cd /
-RUN pip3 install -U pip && pip3 install -U -r requirements.txt
+# Install Python dependencies
+RUN pip3 install --no-cache-dir -U pip && \
+    pip3 install --no-cache-dir -U -r requirements.txt
+
+# Create working directory
 RUN mkdir /VJ-File-Store
 WORKDIR /VJ-File-Store
+
+# Copy application code
 COPY . /VJ-File-Store
+
+# Run the bot
 CMD ["python", "bot.py"]
