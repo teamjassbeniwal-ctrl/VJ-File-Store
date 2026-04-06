@@ -1,7 +1,4 @@
-# Don't Remove Credit Tg - @VJ_Bots
-# Subscribe YouTube Channel For Amazing Bot https://youtube.com/@Tech_VJ
-# Ask Doubt on telegram @KingVJ01
-
+# plugins/clone.py – copy exactly
 import re
 from datetime import datetime
 from pymongo import MongoClient
@@ -10,7 +7,7 @@ from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from config import API_ID, API_HASH, DB_URI, CLONE_MODE
 
-# HARDCODED DATABASE NAME – MUST MATCH THE ONE IN clone_plugins/commands.py
+# IMPORTANT: Use the same database name as in clone_plugins/commands.py
 CLONE_DB_NAME = "cloned_vjbotz"
 
 mongo_client = MongoClient(DB_URI)
@@ -20,9 +17,7 @@ mongo_db = mongo_client[CLONE_DB_NAME]
 async def clone(client, message):
     if CLONE_MODE == False:
         return
-    
     user_id = message.from_user.id
-    
     existing_bot = mongo_db.bots.find_one({"user_id": user_id})
     if existing_bot:
         buttons = [[
@@ -39,7 +34,7 @@ async def clone(client, message):
         return
     
     techvj = await client.ask(
-        message.chat.id, 
+        message.chat.id,
         "<b>📌 Steps to create your clone bot:\n\n"
         "1) Send /newbot to @BotFather\n"
         "2) Give a name for your bot\n"
@@ -48,11 +43,9 @@ async def clone(client, message):
         "5) Forward that message to me\n\n"
         "Type /cancel to cancel this process.</b>"
     )
-    
     if techvj.text and techvj.text.lower() == '/cancel':
         await techvj.delete()
         return await message.reply('<b>❌ Cancelled this process</b>')
-    
     if techvj.forward_from and techvj.forward_from.id == 93372553:
         try:
             bot_token = re.findall(r"\b(\d+:[A-Za-z0-9_-]+)\b", techvj.text)[0]
@@ -62,12 +55,10 @@ async def clone(client, message):
         return await message.reply('<b>❌ Please forward the message from @BotFather only!</b>')
     
     msg = await message.reply_text("**🔄 Creating your clone bot... Please wait.**")
-    
     try:
         vj = Client(f"{bot_token}", API_ID, API_HASH, bot_token=bot_token, plugins={"root": "clone_plugins"})
         await vj.start()
         bot = await vj.get_me()
-        
         details = {
             'bot_id': bot.id,
             'is_bot': True,
@@ -84,11 +75,9 @@ async def clone(client, message):
             'created_at': datetime.now()
         }
         mongo_db.bots.insert_one(details)
-        
         customize_buttons = [[
             InlineKeyboardButton("🎨 Customize Your Bot", callback_data=f"customize_{bot.id}")
         ]]
-        
         await msg.edit_text(
             f"<b>✅ Successfully created your clone bot!</b>\n\n"
             f"<b>🤖 Bot:</b> @{bot.username}\n"
@@ -103,10 +92,8 @@ async def clone(client, message):
 async def delete_cloned_bot(client, message):
     if CLONE_MODE == False:
         return
-    
     user_id = message.from_user.id
     cloned_bot = mongo_db.bots.find_one({"user_id": user_id})
-    
     if cloned_bot:
         mongo_db.bots.delete_one({"user_id": user_id})
         await message.reply_text("**✅ Your cloned bot has been removed from the database.**")
