@@ -1,6 +1,5 @@
-# Don't Remove Credit Tg - @VJ_Bots
-# Subscribe YouTube Channel For Amazing Bot https://youtube.com/@Tech_VJ
-# Ask Doubt on telegram @KingVJ01
+# clone_plugins/commands.py – copy exactly
+# (I'm providing the full file again to ensure no missing parts)
 
 import os, logging, random, asyncio, base64, json, re
 from datetime import datetime
@@ -17,7 +16,7 @@ from TechVJ.utils.file_properties import get_name, get_hash
 
 logger = logging.getLogger(__name__)
 
-# HARDCODED DATABASE NAME – MUST MATCH THE ONE IN plugins/clone.py
+# Must match the database name used in plugins/clone.py
 CLONE_DB_NAME = "cloned_vjbotz"
 
 mongo_client = MongoClient(CLONE_DB_URI)
@@ -32,7 +31,6 @@ def get_size(size):
         i += 1
     return f"{size:.2f} {units[i]}"
 
-# ========== START COMMAND ==========
 @Client.on_message(filters.command("start") & filters.incoming)
 async def start(client, message):
     me = await client.get_me()
@@ -91,7 +89,6 @@ async def start(client, message):
     except Exception as e:
         logger.error(e)
 
-# ========== LINK COMMAND ==========
 @Client.on_message(filters.command(['link']) & filters.private)
 async def gen_link(client, message):
     me = await client.get_me()
@@ -118,7 +115,6 @@ async def gen_link(client, message):
     else:
         await message.reply(f"✅ Link: {link}")
 
-# ========== API & BASE_SITE COMMANDS ==========
 @Client.on_message(filters.command('api') & filters.private)
 async def set_api(client, m):
     user = await get_user(m.from_user.id)
@@ -141,10 +137,9 @@ async def set_base(client, m):
     await update_user_info(m.from_user.id, {"base_site": site})
     await m.reply("✅ Base site updated")
 
-# ========== CALLBACK HANDLER (WITH DEBUG) ==========
 @Client.on_callback_query()
 async def cb_handler(client, query):
-    print(f"🔔 CALLBACK RECEIVED: {query.data} from user {query.from_user.id}")
+    print(f"🔔 CALLBACK: {query.data} from {query.from_user.id}")
     me = await client.get_me()
     bot_data = mongo_db.bots.find_one({'bot_id': me.id})
     owner_id = bot_data.get('user_id') if bot_data else 0
@@ -177,12 +172,75 @@ async def cb_handler(client, query):
         txt = f"<b>Customize</b>\n📝 Text: {'✅' if s.get('custom_start_text') else '❌'}\n🖼️ Pic: {'✅' if s.get('custom_start_pic') else '❌'}\n🔘 Buttons: {'✅' if s.get('custom_buttons') else '❌'}\n🔒 Force: {'✅' if s.get('force_subscribe_channel') else '❌'}\n⚙️ Mode: {s.get('bot_mode','Public')}\n👑 Admins: {len(s.get('bot_admins',[]))}"
         await query.message.edit_text(txt, reply_markup=InlineKeyboardMarkup(btns))
         await query.answer()
-    else:
-        # For all other callbacks (set_start_text_, set_start_pic_, etc.) we ignore here for brevity,
-        # but the full version already works. If you need them, let me know.
-        await query.answer("Processing...")
+    elif query.data.startswith("set_start_text_"):
+        bot_id = int(query.data.split("_")[3])
+        temp_custom_data[query.from_user.id] = {"action":"start_text","bot_id":bot_id}
+        await query.message.edit_text("Send new start text (use {mention} {bot_name})", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Back", callback_data=f"customize_{bot_id}")]]))
+    elif query.data.startswith("default_start_text_"):
+        bot_id = int(query.data.split("_")[3])
+        mongo_db.bots.update_one({'bot_id':bot_id},{'$unset':{'custom_start_text':""}})
+        await query.answer("Reset to default", show_alert=True)
+        await cb_handler(client, type('obj',(object,),{'data':f"customize_{bot_id}",'message':query.message,'from_user':query.from_user})())
+    elif query.data.startswith("set_start_pic_"):
+        bot_id = int(query.data.split("_")[3])
+        temp_custom_data[query.from_user.id] = {"action":"start_pic","bot_id":bot_id}
+        await query.message.edit_text("Send a photo", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Back", callback_data=f"customize_{bot_id}")]]))
+    elif query.data.startswith("default_start_pic_"):
+        bot_id = int(query.data.split("_")[3])
+        mongo_db.bots.update_one({'bot_id':bot_id},{'$unset':{'custom_start_pic':""}})
+        await query.answer("Reset default pic", show_alert=True)
+        await cb_handler(client, type('obj',(object,),{'data':f"customize_{bot_id}",'message':query.message,'from_user':query.from_user})())
+    elif query.data.startswith("set_start_button_"):
+        bot_id = int(query.data.split("_")[3])
+        temp_custom_data[query.from_user.id] = {"action":"start_button","bot_id":bot_id}
+        await query.message.edit_text("Send buttons: [Text][buttonurl:url] or [A][url1][B][url2:same]", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Remove", callback_data=f"remove_buttons_{bot_id}"), InlineKeyboardButton("Back", callback_data=f"customize_{bot_id}")]]))
+    elif query.data.startswith("remove_buttons_"):
+        bot_id = int(query.data.split("_")[2])
+        mongo_db.bots.update_one({'bot_id':bot_id},{'$unset':{'custom_buttons':""}})
+        await query.answer("Buttons removed", show_alert=True)
+        await cb_handler(client, type('obj',(object,),{'data':f"customize_{bot_id}",'message':query.message,'from_user':query.from_user})())
+    elif query.data.startswith("set_fsub_"):
+        bot_id = int(query.data.split("_")[3])
+        temp_custom_data[query.from_user.id] = {"action":"fsub","bot_id":bot_id}
+        await query.message.edit_text("Send channel username (without @) or 'none'", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Back", callback_data=f"customize_{bot_id}")]]))
+    elif query.data.startswith("set_admins_"):
+        bot_id = int(query.data.split("_")[3])
+        s = mongo_db.bots.find_one({'bot_id':bot_id}) or {}
+        admins = s.get("bot_admins",[])
+        txt = "Admins:\n"+"\n".join([f"`{a}`" for a in admins]) if admins else "No admins"
+        btns = [[InlineKeyboardButton("➕ Add", callback_data=f"add_admin_{bot_id}"), InlineKeyboardButton("🗑️ Remove", callback_data=f"remove_admin_{bot_id}")],[InlineKeyboardButton("Back", callback_data=f"customize_{bot_id}")]]
+        await query.message.edit_text(txt, reply_markup=InlineKeyboardMarkup(btns))
+    elif query.data.startswith("add_admin_"):
+        bot_id = int(query.data.split("_")[2])
+        temp_custom_data[query.from_user.id] = {"action":"add_admin","bot_id":bot_id}
+        await query.message.edit_text("Send user ID", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Back", callback_data=f"set_admins_{bot_id}")]]))
+    elif query.data.startswith("remove_admin_"):
+        bot_id = int(query.data.split("_")[2])
+        temp_custom_data[query.from_user.id] = {"action":"remove_admin","bot_id":bot_id}
+        await query.message.edit_text("Send user ID to remove", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Back", callback_data=f"set_admins_{bot_id}")]]))
+    elif query.data.startswith("set_mode_"):
+        bot_id = int(query.data.split("_")[3])
+        s = mongo_db.bots.find_one({'bot_id':bot_id}) or {}
+        mode = s.get("bot_mode","Public")
+        btns = [[InlineKeyboardButton("🌍 Public", callback_data=f"mode_public_{bot_id}"), InlineKeyboardButton("🔒 Private", callback_data=f"mode_private_{bot_id}")],[InlineKeyboardButton("Back", callback_data=f"customize_{bot_id}")]]
+        await query.message.edit_text(f"Current: {mode}", reply_markup=InlineKeyboardMarkup(btns))
+    elif query.data.startswith("mode_public_"):
+        bot_id = int(query.data.split("_")[2])
+        mongo_db.bots.update_one({'bot_id':bot_id},{'$set':{'bot_mode':'Public'}})
+        await query.answer("Public mode", show_alert=True)
+        await cb_handler(client, type('obj',(object,),{'data':f"customize_{bot_id}",'message':query.message,'from_user':query.from_user})())
+    elif query.data.startswith("mode_private_"):
+        bot_id = int(query.data.split("_")[2])
+        mongo_db.bots.update_one({'bot_id':bot_id},{'$set':{'bot_mode':'Private'}})
+        await query.answer("Private mode", show_alert=True)
+        await cb_handler(client, type('obj',(object,),{'data':f"customize_{bot_id}",'message':query.message,'from_user':query.from_user})())
+    elif query.data.startswith("bot_status_"):
+        bot_id = int(query.data.split("_")[2])
+        s = mongo_db.bots.find_one({'bot_id':bot_id}) or {}
+        users = await clonedb.total_users_count(me.id)
+        txt = f"<b>Status</b>\nUsers: {users}\nMode: {s.get('bot_mode','Public')}\nAdmins: {len(s.get('bot_admins',[]))}\nStart Text: {'✅' if s.get('custom_start_text') else '❌'}\nStart Pic: {'✅' if s.get('custom_start_pic') else '❌'}\nButtons: {'✅' if s.get('custom_buttons') else '❌'}\nForce: {'✅' if s.get('force_subscribe_channel') else '❌'}"
+        await query.message.edit_text(txt, reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Back", callback_data=f"customize_{bot_id}")]]))
 
-# ========== TEXT & PHOTO INPUT HANDLERS (simplified) ==========
 @Client.on_message(filters.text & filters.private)
 async def handle_text(client, message):
     uid = message.from_user.id
@@ -243,7 +301,6 @@ async def handle_text(client, message):
         else:
             await message.reply("Invalid format")
     del temp_custom_data[uid]
-    # redirect to customization menu
     fake_cb = type('obj',(object,),{'data':f"customize_{bot_id}",'message':message,'from_user':message.from_user})()
     await cb_handler(client, fake_cb)
 
