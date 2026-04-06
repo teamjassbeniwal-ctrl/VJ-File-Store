@@ -1,18 +1,16 @@
-# Don't Remove Credit Tg - @VJ_Bots
-# Subscribe YouTube Channel For Amazing Bot https://youtube.com/@Tech_VJ
-# Ask Doubt on telegram @KingVJ01
-
 import re
 from datetime import datetime
 from pymongo import MongoClient
 from Script import script
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from config import API_ID, API_HASH, DB_URI, CLONE_MODE
+from config import API_ID, API_HASH, DB_URI, CLONE_MODE, CDB_NAME   # ← added CDB_NAME
 
 # MongoDB connection for clone bots
 mongo_client = MongoClient(DB_URI)
-mongo_db = mongo_client["cloned_vjbotz"]
+mongo_db = mongo_client[CDB_NAME]   # ← changed from "cloned_vjbotz"
+
+# ... rest of the file unchanged
 
 @Client.on_message(filters.command("clone") & filters.private)
 async def clone(client, message):
