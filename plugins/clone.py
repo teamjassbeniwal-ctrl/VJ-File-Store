@@ -1,16 +1,20 @@
+# Don't Remove Credit Tg - @VJ_Bots
+# Subscribe YouTube Channel For Amazing Bot https://youtube.com/@Tech_VJ
+# Ask Doubt on telegram @KingVJ01
+
 import re
 from datetime import datetime
 from pymongo import MongoClient
 from Script import script
 from pyrogram import Client, filters
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
-from config import API_ID, API_HASH, DB_URI, CLONE_MODE, CDB_NAME   # ← added CDB_NAME
+from config import API_ID, API_HASH, DB_URI, CLONE_MODE
 
-# MongoDB connection for clone bots
+# HARDCODED DATABASE NAME – MUST MATCH THE ONE IN clone_plugins/commands.py
+CLONE_DB_NAME = "cloned_vjbotz"
+
 mongo_client = MongoClient(DB_URI)
-mongo_db = mongo_client[CDB_NAME]   # ← changed from "cloned_vjbotz"
-
-# ... rest of the file unchanged
+mongo_db = mongo_client[CLONE_DB_NAME]
 
 @Client.on_message(filters.command("clone") & filters.private)
 async def clone(client, message):
@@ -19,7 +23,6 @@ async def clone(client, message):
     
     user_id = message.from_user.id
     
-    # Check if user already has a clone bot
     existing_bot = mongo_db.bots.find_one({"user_id": user_id})
     if existing_bot:
         buttons = [[
