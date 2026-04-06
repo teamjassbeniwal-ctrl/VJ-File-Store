@@ -2,13 +2,12 @@
 # Subscribe YouTube Channel For Amazing Bot @Tech_VJ
 # Ask Doubt on telegram @KingVJ01
 
-import logging, asyncio, os, re, random, pytz, aiohttp, requests, string, json, http.client
+import logging, asyncio, os, re, random, pytz, aiohttp, string, json
 from datetime import date, datetime
 from config import SHORTLINK_API, SHORTLINK_URL
 from shortzy import Shortzy
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 TOKENS = {}
 VERIFIED = {}
 
@@ -28,10 +27,6 @@ async def get_verify_shorted_link(link):
             logger.error(e)
             return link
     else:
-  #      response = requests.get(f"https://{SHORTLINK_URL}/api?api={SHORTLINK_API}&url={link}")
- #       data = response.json()
-  #      if data["status"] == "success" or rget.status_code == 200:
-   #         return data["shortenedUrl"]
         shortzy = Shortzy(api_key=SHORTLINK_API, base_site=SHORTLINK_URL)
         link = await shortzy.convert(link)
         return link
@@ -72,9 +67,27 @@ async def check_verification(bot, userid):
         EXP = VERIFIED[user.id]
         years, month, day = EXP.split('-')
         comp = date(int(years), int(month), int(day))
-        if comp<today:
+        if comp < today:
             return False
         else:
             return True
     else:
         return False
+
+# ADD THIS FUNCTION - This is what was missing!
+async def get_short_link(user, link):
+    """Get shortened link using user's shortener API"""
+    api_key = user.get("shortener_api")
+    base_site = user.get("base_site")
+    
+    # If no API key or base site, return original link
+    if not api_key or not base_site:
+        return link
+    
+    try:
+        shortzy = Shortzy(api_key=api_key, base_site=base_site)
+        short_link = await shortzy.convert(link)
+        return short_link
+    except Exception as e:
+        logger.error(f"Shortener error: {e}")
+        return link
